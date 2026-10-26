@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACRF Dashboard</title>
+<meta name="description" content="Proof-of-concept dashboard for the LogiData Adaptive Capacity & Risk Framework (ACRF), running the published Python implementation in the browser.">
+<style>
+:root{
+  --bg:#f5f6f8;--surface:#fff;--surface2:#f9fafb;--ink:#14213d;--muted:#5b6475;--faint:#8a93a3;--line:#e3e6eb;
+  --acrf:#1f6fe0;--classic:#a3abb8;--fc:#d9822b;--good:#17924a;--warn:#b7791f;--bad:#c0392b;--accent-soft:#e8f0fd;
+  --u:#1f6fe0;--f:#17924a;--d:#b7791f;--r:12px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e131b;--surface:#161d28;--surface2:#1b2330;--ink:#e8ecf2;--muted:#9aa4b5;--faint:#6f7a8c;--line:#283142;
+  --acrf:#5b9bff;--classic:#6b7586;--fc:#f0a050;--good:#3fbf74;--warn:#e0a64a;--bad:#ef6b5b;--accent-soft:#1b2a40;
+  --u:#5b9bff;--f:#3fbf74;--d:#e0a64a;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:24px 16px 48px}
+a{color:var(--acrf)}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:16px}
+h1{font-size:26px;line-height:1.2;margin:0}
+.tag{display:inline-block;font-size:12px;font-weight:600;color:var(--acrf);background:var(--accent-soft);border-radius:999px;padding:2px 10px;margin-left:8px;vertical-align:4px}
+.lede{margin:6px 0 0;color:var(--muted);max-width:760px}
+.status{font-size:13px;color:var(--muted);padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);white-space:nowrap}
+.status.busy{color:var(--acrf);border-color:var(--acrf)}
+.status.err{color:var(--bad);border-color:var(--bad)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:16px}
+.ctl{display:flex;flex-direction:column;gap:4px;min-width:150px}
+.ctl label,.lbl{font-size:12px;color:var(--muted)}
+select,input[type=number],input[type=text]{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:14px;border:0;background:var(--surface2);color:var(--muted);padding:7px 12px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--acrf);color:#fff}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn:hover{border-color:var(--acrf)}
+.btn.primary{background:var(--acrf);border-color:var(--acrf);color:#fff}
+.switch{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;padding:7px 0}
+.switch input{accent-color:var(--acrf);width:16px;height:16px}
+.spacer{flex:1}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.panel h2{font-size:16px;margin:0 0 4px}
+.panel .sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+.hidden{display:none!important}
+.adv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.map{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.kpi .k{font-size:12px;color:var(--muted)}
+.kpi .v{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.25;margin-top:2px}
+.kpi .s{font-size:12px;color:var(--faint)}
+.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+th:first-child,td:first-child{text-align:left}
+th[aria-sort]::after{content:" ▾";color:var(--acrf)}
+th[aria-sort=ascending]::after{content:" ▴"}
+td{text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--surface2)}
+tbody tr.sel{background:var(--accent-soft)}
+.badge{display:inline-block;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid currentColor}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin:2px 0 6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend i.line{height:2px;width:14px;vertical-align:3px;border-radius:0}
+svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--muted);font-size:11px}
+.detail-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 14px}
+@media(max-width:700px){.facts{grid-template-columns:repeat(2,1fr)}}
+.fact{background:var(--surface2);border-radius:8px;padding:8px 10px}
+.fact .k{font-size:12px;color:var(--muted)}.fact .v{font-weight:650;font-variant-numeric:tabular-nums}
+.charts3{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+@media(max-width:860px){.charts3{grid-template-columns:1fr}}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--surface);font-size:12px;line-height:1.4;padding:6px 9px;border-radius:6px;z-index:10;max-width:240px;opacity:0;transition:opacity .08s}
+.note{font-size:13px;color:var(--muted)}
+details summary{cursor:pointer;font-weight:600}
+details p,details li{color:var(--muted);font-size:14px}
+code{font-size:13px}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;color:var(--muted);font-size:14px}
+.drop.over{border-color:var(--acrf);background:var(--accent-soft)}
+@media print{
+  body{background:#fff}.toolbar,.no-print,#advPanel,#mapPanel{display:none!important}
+  .panel,.kpi{break-inside:avoid;border-color:#ccc}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>ACRF Dashboard <span class="tag">Proof-of-concept prototype</span></h1>
+      <p class="lede">Inventory and capacity-risk analytics for small and mid-sized businesses, built on the LogiData Adaptive Capacity &amp; Risk Framework. All calculations run the published
+        <a href="https://github.com/AdeboJ/logidata-acrf-framework" target="_blank" rel="noopener">acrf_framework.py</a> in your browser; uploaded data never leaves your device.</p>
+    </div>
+    <div id="status" class="status busy">Starting analysis engine…</div>
+  </header>
+
+  <div class="toolbar no-print">
+    <div class="ctl">
+      <span class="lbl">Data</span>
+      <div class="seg" role="group" aria-label="Data source">
+        <button id="srcSample" aria-pressed="true">Sample dataset</button>
+        <button id="srcUpload" aria-pressed="false">Upload CSV</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <label for="topn">Categories</label>
+      <select id="topn">
+        <option value="5" selected>Top 5 by volume</option>
+        <option value="10">Top 10 by volume</option>
+        <option value="0">All categories</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label for="z">Target service level</label>
+      <select id="z">
+        <option value="1.28">90%</option>
+        <option value="1.65" selected>95%</option>
+        <option value="1.96">97.5%</option>
+        <option value="2.33">99%</option>
+      </select>
+    </div>
+    <label class="switch" title="Applies Component 2: the rolling forecast error adjusts the confidence factor c(n).">
+      <input id="feedback" type="checkbox"> Apply forecast-error feedback
+    </label>
+    <div class="spacer"></div>
+    <button class="btn" id="advBtn" aria-expanded="false">Settings</button>
+    <button class="btn" id="mapBtn">Column mapping</button>
+  </div>
+
+  <input id="file" type="file" accept=".csv,text/csv" class="hidden">
+
+  <section id="uploadPanel" class="panel hidden no-print">
+    <h2>Upload your order history</h2>
+    <p class="sub">A CSV with one row per order line. Required: order date, category or SKU, quantity. Optional: unit price or sales, actual and scheduled lead time, late-delivery flag, carrier or supplier. The file is processed in your browser and is not uploaded anywhere.</p>
+    <div id="drop" class="drop">Drag a CSV here, or <button class="btn" id="pick">choose a file</button></div>
+  </section>
+
+  <section id="mapPanel" class="panel hidden">
+    <h2>Column mapping</h2>
+    <p class="sub">Match your columns to what the framework needs. Detected automatically where possible.</p>
+    <div class="map" id="mapFields"></div>
+    <div style="margin-top:12px"><button class="btn primary" id="mapApply">Apply mapping</button></div>
+  </section>
+
+  <section id="advPanel" class="panel hidden">
+    <h2>Settings</h2>
+    <p class="sub">Framework defaults match the published implementation. Change them to explore sensitivity.</p>
+    <div class="adv">
+      <div class="ctl"><label for="nOverride">Days of history used for c(n): <b id="nLabel">actual</b></label><input id="nOverride" type="range" min="7" max="850" value="147"><button class="btn" id="nReset" style="margin-top:4px">Use actual history</button></div>
+      <div class="ctl"><label for="bench">Enterprise benchmark (days)</label><input id="bench" type="number" min="30" step="1" value="730"></div>
+      <div class="ctl"><label for="ma">Forecast: moving average (days)</label><input id="ma" type="number" min="1" max="60" step="1" value="5"></div>
+      <div class="ctl"><label for="mw">Rolling MAPE window (days)</label><input id="mw" type="number" min="5" max="120" step="1" value="30"></div>
+      <div class="ctl"><label for="wu">CCRS weight: utilization</label><input id="wu" type="number" min="0" max="1" step="0.05" value="0.40"></div>
+      <div class="ctl"><label for="wf">CCRS weight: forecast reliability</label><input id="wf" type="number" min="0" max="1" step="0.05" value="0.35"></div>
+      <div class="ctl"><label for="wd">CCRS weight: disruption exposure</label><input id="wd" type="number" min="0" max="1" step="0.05" value="0.25"></div>
+      <div class="ctl"><label for="fl">Lead time if not in data (days)</label><input id="fl" type="number" min="0" step="0.5" value="7"></div>
+    </div>
+    <p class="note" id="wNote"></p>
+  </section>
+
+  <section class="kpis" id="kpis" aria-live="polite"></section>
+
+  <div class="grid2">
+    <section class="panel">
+      <h2>Inventory capital not tied up, by category</h2>
+      <p class="sub">Value of safety stock under the classical formula versus the ACRF recommendation.</p>
+      <div class="legend"><span><i style="background:var(--classic)"></i>Classical safety stock</span><span><i style="background:var(--acrf)"></i>ACRF safety stock</span></div>
+      <svg id="barChart" viewBox="0 0 560 240" role="img" aria-label="Safety stock value by category"></svg>
+    </section>
+    <section class="panel">
+      <h2>How confidence grows with data</h2>
+      <p class="sub">The confidence factor c(n) scales the service-level target to the amount of demand history available. As history accumulates, ACRF converges to the classical formula.</p>
+      <svg id="curveChart" viewBox="0 0 460 230" role="img" aria-label="Confidence factor c(n) by days of history"></svg>
+      <p class="note" id="curveNote"></p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="detail-head">
+      <div><h2>Category results</h2><p class="sub" style="margin:0">Select a row for its demand, forecast-error, and risk detail. Click a column heading to sort.</p></div>
+      <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="exportBtn">Export CSV</button>
+        <button class="btn" id="printBtn">Print summary</button>
+      </div>
+    </div>
+    <div class="tablewrap" style="margin-top:10px"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="panel" id="detail"></section>
+
+  <section class="panel">
+    <details>
+      <summary>Methodology and data notes</summary>
+      <ul>
+        <li><b>Component 1, data-sparsity-adjusted safety stock.</b> Classical: SS = z × √(L·σ<sub>D</sub>² + D²·σ<sub>L</sub>²). ACRF: SS = z·c(n) × √(L·σ<sub>D</sub>² + D²·σ<sub>L</sub>²), with c(n) = ln(1+n) / ln(1+730), bounded to [0.5, 1.0]. D and σ<sub>D</sub> come from daily demand per category (days with no orders count as zero); L and σ<sub>L</sub> from actual shipping days. n is the number of days in the observation window.</li>
+        <li><b>Component 2, iterative forecast-error correction.</b> A moving-average forecast (default 5 days) is scored with a rolling MAPE (default 30-day window). The latest MAPE sets a correction factor max(0.8, 1 − MAPE/200) that multiplies c(n) when feedback is switched on.</li>
+        <li><b>Component 3, Composite Capacity-Risk Score.</b> 40% utilization efficiency (share of deliveries on or before schedule), 35% forecast reliability (100 − rolling MAPE), and 25% disruption exposure ((1 − HHI) × 150, using shipping mode as a proxy for carrier diversification). 70+ Low, 50–69 Moderate, below 50 High risk.</li>
+        <li><b>Capital not tied up</b> = (classical − ACRF safety stock) × average unit price per category.</li>
+        <li><b>Sample data.</b> DataCo SMART Supply Chain for Big Data Analysis (Constante, Silva &amp; Pereira, Mendeley Data, 2019, <a href="https://doi.org/10.17632/8gx2fvg2k6.5" target="_blank" rel="noopener">doi:10.17632/8gx2fvg2k6.5</a>), filtered to the U.S. Consumer segment: 12,432 order records from April 1 to August 25, 2016. The default view uses the five highest-volume categories (7,596 records). <a href="data/dataco_us_consumer.csv" download>Download the sample file</a>.</li>
+        <li>This is a demonstration of the framework's calculation logic on public data, not an outcome-based comparison of realized stockouts or holding costs.</li>
+      </ul>
+    </details>
+  </section>
+
+  <footer class="note">
+    © 2026 LogiData Analytics Solutions LLC · Methodology and source: <a href="https://github.com/AdeboJ/logidata-acrf-framework" target="_blank" rel="noopener">github.com/AdeboJ/logidata-acrf-framework</a>
+  </footer>
+</div>
+<div class="tip" id="tip"></div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script>
+(async () => {
+const $ = id => document.getElementById(id);
+const status = (t, cls = '') => { const s = $('status'); s.textContent = t; s.className = 'status ' + cls; };
+const fmt = (x, d = 1) => x == null || isNaN(x) ? '–' : Number(x).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const usd = x => x == null ? '–' : '$' + fmt(x, 0);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const riskColor = c => c === 'Low Risk' ? 'var(--good)' : c === 'Moderate Risk' ? 'var(--warn)' : 'var(--bad)';
+
+let py, mapping = null, columns = [], result = null, selected = null, sortKey = 'capital_freed', sortDir = -1, nTouched = false;
+
+// ---------- tooltip ----------
+const tip = $('tip');
+function showTip(e, html) { tip.innerHTML = html; tip.style.opacity = 1; moveTip(e); }
+function moveTip(e) { const x = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8); tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px'; }
+function hideTip() { tip.style.opacity = 0; }
+function bindTips(svg) {
+  svg.querySelectorAll('[data-tip]').forEach(el => {
+    el.addEventListener('mouseenter', e => showTip(e, el.dataset.tip));
+    el.addEventListener('mousemove', moveTip);
+    el.addEventListener('mouseleave', hideTip);
+  });
+}
+
+// ---------- engine ----------
+try {
+  py = await loadPyodide();
+  status('Loading numerical libraries…', 'busy');
+  await py.loadPackage(['numpy', 'pandas']);
+  for (const f of ['acrf_framework.py', 'acrf_dashboard.py']) {
+    const r = await fetch(f, { cache: 'no-cache' }); if (!r.ok) throw new Error('could not load ' + f);
+    py.FS.writeFile(f, await r.text());
+  }
+  py.runPython('import acrf_dashboard');
+} catch (e) { status('Engine failed to start: ' + e.message, 'err'); return; }
+
+function callPy(fn, arg) {
+  py.globals.set('arg_json', arg);
+  return JSON.parse(py.runPython(`acrf_dashboard.${fn}(arg_json)`));
+}
+function loadCsv(text, source) {
+  py.globals.set('csv_text', text); py.globals.set('src', source);
+  const info = JSON.parse(py.runPython('acrf_dashboard.load(csv_text, src)'));
+  columns = info.columns; mapping = info.guess;
+  return info;
+}
+async function loadSample() {
+  status('Loading sample dataset…', 'busy');
+  const r = await fetch('data/dataco_us_consumer.csv'); const t = await r.text();
+  loadCsv(t, 'DataCo SMART Supply Chain, U.S. Consumer segment');
+  $('nOverride').value = 147; nTouched = false;
+  run();
+}
+
+function params() {
+  const w = ['wu', 'wf', 'wd'].map(id => Math.max(0, Number($(id).value) || 0));
+  const sum = w.reduce((a, b) => a + b, 0) || 1;
+  $('wNote').textContent = Math.abs(sum - 1) > 0.001 ? `Weights sum to ${sum.toFixed(2)}; they are rescaled to 1.0 for the score.` : '';
+  return {
+    mapping, z: Number($('z').value), top_n: Number($('topn').value), feedback: $('feedback').checked,
+    benchmark: Math.max(30, Number($('bench').value) || 730), ma_window: Math.max(1, Number($('ma').value) || 5),
+    mape_window: Math.max(5, Number($('mw').value) || 30), weights: w.map(x => x / sum),
+    n_override: nTouched ? Number($('nOverride').value) : null, fallback_lead: Number($('fl').value) || 7,
+  };
+}
+
+function run() {
+  if (!mapping) return;
+  status('Calculating…', 'busy');
+  setTimeout(() => {
+    try {
+      result = callPy('analyze', JSON.stringify(params()));
+    } catch (e) {
+      status(String(e.message).split('\n').filter(Boolean).pop(), 'err'); return;
+    }
+    const P = result.portfolio;
+    if (!nTouched) $('nOverride').value = P.n_days;
+    $('nLabel').textContent = nTouched ? P.n_used + ' days (what-if)' : P.n_days + ' days (actual)';
+    if (!result.categories.find(c => c.category === selected)) selected = [...result.categories].sort((a, b) => (b.capital_freed ?? 0) - (a.capital_freed ?? 0))[0]?.category;
+    render();
+    status(`Ready · ${P.records.toLocaleString()} records analysed`);
+  }, 20);
+}
+
+// ---------- rendering ----------
+function render() {
+  hideTip();
+  const P = result.portfolio, C = result.categories;
+  const ccrsBand = P.ccrs_avg == null ? null : P.ccrs_avg >= 70 ? 'Low Risk' : P.ccrs_avg >= 50 ? 'Moderate Risk' : 'High Risk';
+  const kp = [
+    ['Inventory capital not tied up', usd(P.capital_freed), P.capital_freed == null ? 'Add a price column' : `${P.categories} categories`],
+    ['Safety-stock value', P.ss_value_acrf == null ? fmt(P.units_acrf, 0) + ' units' : usd(P.ss_value_acrf), P.ss_value_classical == null ? `vs ${fmt(P.units_classical, 0)} classical` : `vs ${usd(P.ss_value_classical)} classical`],
+    ['Data confidence c(n)', fmt(P.c_n, 3), `${P.n_used} of ${fmt(params().benchmark, 0)} benchmark days`],
+    ['Capacity-risk score', P.ccrs_avg == null ? '–' : fmt(P.ccrs_avg), P.ccrs_avg == null ? 'Needs delivery or carrier data' : `<span style="color:${riskColor(ccrsBand)};font-weight:600">${ccrsBand}</span> · range ${fmt(P.ccrs_min)}–${fmt(P.ccrs_max)}`],
+    ['On-time delivery', P.on_time_avg == null ? '–' : fmt(P.on_time_avg) + '%', P.on_time_avg == null ? 'No delivery data' : 'average across categories'],
+    ['Records analysed', P.records.toLocaleString(), `${P.orders ? P.orders.toLocaleString() + ' orders · ' : ''}${P.start} – ${P.end}`],
+  ];
+  $('kpis').innerHTML = kp.map(([k, v, s]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`).join('');
+  drawBars(C, P.has.value);
+  drawCurve(result.curve, P.n_used, P.c_n);
+  $('curveNote').textContent = `${P.n_used} days of history gives c(n) = ${fmt(P.c_n, 3)}: the ACRF sets safety stock at ${fmt(P.c_n * 100, 1)}% of the classical level${$('feedback').checked ? ', before forecast-error feedback' : ''}. Try the history slider in Settings to see how recommendations tighten as data accumulates.`;
+  drawTable(C);
+  drawDetail(C.find(c => c.category === selected));
+}
+
+function drawBars(C, hasValue) {
+  const svg = $('barChart'), rows = [...C].sort((a, b) => (b.capital_freed ?? b.units_freed) - (a.capital_freed ?? a.units_freed));
+  const W = Math.max(300, Math.round(svg.clientWidth || 560)), rowH = 34, top = 6, left = Math.min(150, Math.round(W * 0.34)), right = 64, H = top + rows.length * rowH + 22;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const val = (r, k) => hasValue ? r[k] * (r.unit_value ?? 0) : r[k];
+  const max = Math.max(1, ...rows.map(r => val(r, 'ss_classical')));
+  const x = v => left + (v / max) * (W - left - right);
+  let g = '';
+  [0, 0.25, 0.5, 0.75, 1].forEach(t => { const v = max * t; g += `<line x1="${x(v)}" x2="${x(v)}" y1="${top}" y2="${H - 20}" stroke="var(--line)"/><text x="${x(v)}" y="${H - 6}" text-anchor="middle">${hasValue ? '$' + fmt(v / 1000, 1) + 'k' : fmt(v, 0)}</text>`; });
+  rows.forEach((r, i) => {
+    const y = top + i * rowH, c = val(r, 'ss_classical'), a = val(r, 'ss_acrf');
+    const t = `<b>${esc(r.category)}</b><br>Classical: ${hasValue ? usd(c) : fmt(c) + ' units'} (${fmt(r.ss_classical)} units)<br>ACRF: ${hasValue ? usd(a) : fmt(a) + ' units'} (${fmt(r.ss_acrf)} units)<br>Not tied up: ${hasValue ? usd(r.capital_freed) : fmt(r.units_freed) + ' units'}`;
+    g += `<text x="${left - 8}" y="${y + 17}" text-anchor="end" style="fill:var(--ink);font-size:12px">${esc(r.category.length > 22 ? r.category.slice(0, 21) + '…' : r.category)}</text>`;
+    g += `<rect x="${left}" y="${y + 4}" width="${Math.max(2, x(c) - left)}" height="11" rx="2" fill="var(--classic)"/>`;
+    g += `<rect x="${left}" y="${y + 17}" width="${Math.max(2, x(a) - left)}" height="11" rx="2" fill="var(--acrf)"/>`;
+    g += `<text x="${x(c) + 6}" y="${y + 26}" style="fill:var(--ink);font-weight:600">${hasValue ? usd(r.capital_freed) : fmt(r.units_freed) + ' u'}</text>`;
+    g += `<rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent" data-tip="${esc(t)}" style="cursor:pointer" data-cat="${esc(r.category)}"/>`;
+  });
+  svg.innerHTML = g; bindTips(svg);
+  svg.querySelectorAll('[data-cat]').forEach(el => el.addEventListener('click', () => { selected = el.dataset.cat; render(); $('detail').scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+}
+
+function drawCurve(curve, n, c) {
+  const svg = $('curveChart'), W = Math.max(300, Math.round(svg.clientWidth || 460)), H = 230, l = 38, r = 12, t = 12, b = 30, maxX = 850;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const x = v => l + (Math.min(v, maxX) / maxX) * (W - l - r), y = v => t + (1 - (v - 0.4) / 0.6) * (H - t - b);
+  const bench = params().benchmark;
+  let g = '';
+  [0.4, 0.6, 0.8, 1.0].forEach(v => g += `<line x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${l - 6}" y="${y(v) + 4}" text-anchor="end">${v.toFixed(1)}</text>`);
+  [0, 180, 365, 540, 730].forEach(v => g += `<text x="${x(v)}" y="${H - 10}" text-anchor="middle">${v}</text>`);
+  g += `<text x="${(l + W - r) / 2}" y="${H}" text-anchor="middle">days of demand history</text>`;
+  if (bench <= maxX) g += `<line x1="${x(bench)}" x2="${x(bench)}" y1="${t}" y2="${H - b}" stroke="var(--faint)" stroke-dasharray="3 3"/><text x="${x(bench) - 5}" y="${y(0.46)}" text-anchor="end">enterprise benchmark</text>`;
+  g += `<polyline points="${curve.map(([k, v]) => `${x(k)},${y(v)}`).join(' ')}" fill="none" stroke="var(--acrf)" stroke-width="2"/>`;
+  g += `<circle cx="${x(n)}" cy="${y(c)}" r="6" fill="var(--acrf)" stroke="var(--surface)" stroke-width="2" data-tip="${n} days → c(n) = ${fmt(c, 3)}"/>`;
+  g += `<text x="${x(n) + 9}" y="${y(c) + 16}" style="fill:var(--ink);font-weight:600">${n} days · ${fmt(c, 3)}</text>`;
+  svg.innerHTML = g; bindTips(svg);
+}
+
+const COLS = [
+  ['category', 'Category', r => esc(r.category)],
+  ['records', 'Records', r => r.records.toLocaleString()],
+  ['avg_daily_demand', 'Avg daily units', r => fmt(r.avg_daily_demand)],
+  ['lead_time', 'Lead time (d)', r => fmt(r.lead_time)],
+  ['ss_classical', 'Classical SS', r => fmt(r.ss_classical)],
+  ['ss_acrf', 'ACRF SS', r => fmt(r.ss_acrf)],
+  ['reduction_pct', 'Reduction', r => fmt(r.reduction_pct) + '%'],
+  ['capital_freed', 'Capital not tied up', r => usd(r.capital_freed)],
+  ['mape', 'Forecast MAPE', r => r.mape == null ? '–' : fmt(r.mape) + '%'],
+  ['ccrs', 'CCRS', r => r.ccrs ? `${fmt(r.ccrs.ccrs_score)} <span class="badge" style="color:${riskColor(r.ccrs.risk_category)}">${r.ccrs.risk_category.replace(' Risk', '')}</span>` : '–'],
+];
+function sortVal(r, k) { return k === 'ccrs' ? (r.ccrs?.ccrs_score ?? -1) : k === 'category' ? r.category : (r[k] ?? -Infinity); }
+function drawTable(C) {
+  const rows = [...C].sort((a, b) => { const A = sortVal(a, sortKey), B = sortVal(b, sortKey); return (A > B ? 1 : A < B ? -1 : 0) * sortDir; });
+  $('tbl').querySelector('thead').innerHTML = '<tr>' + COLS.map(([k, h]) => `<th data-k="${k}" ${k === sortKey ? `aria-sort="${sortDir > 0 ? 'ascending' : 'descending'}"` : ''}>${h}</th>`).join('') + '</tr>';
+  $('tbl').querySelector('tbody').innerHTML = rows.map(r => `<tr data-cat="${esc(r.category)}" class="${r.category === selected ? 'sel' : ''}">` + COLS.map(([, , f]) => `<td>${f(r)}</td>`).join('') + '</tr>').join('');
+  $('tbl').querySelectorAll('th').forEach(th => th.onclick = () => { const k = th.dataset.k; sortDir = k === sortKey ? -sortDir : (k === 'category' ? 1 : -1); sortKey = k; drawTable(result.categories); });
+  $('tbl').querySelectorAll('tbody tr').forEach(tr => tr.onclick = () => { selected = tr.dataset.cat; drawTable(result.categories); drawDetail(result.categories.find(c => c.category === selected)); });
+}
+
+function lineChart(svg, days, series, opts) {
+  const W = Math.max(280, Math.round(svg.clientWidth || 620)), H = opts.h || 220, l = 40, r = 10, t = 10, b = 26;
+  const n = days.length, vals = series.flatMap(s => s.values.filter(v => v != null));
+  const max = Math.max(1, ...vals) * 1.08, min = 0;
+  const x = i => l + (i / Math.max(1, n - 1)) * (W - l - r), y = v => t + (1 - (v - min) / (max - min)) * (H - t - b);
+  let g = '';
+  for (let k = 0; k <= 4; k++) { const v = min + (max - min) * k / 4; g += `<line x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${l - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v, 0)}${opts.unit || ''}</text>`; }
+  const ticks = W < 420 ? 3 : 5; for (let k = 0; k <= ticks; k++) { const i = Math.round((n - 1) * k / ticks); const d = new Date(days[i] + 'T00:00'); g += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</text>`; }
+  series.forEach(s => {
+    let path = '', pen = false;
+    s.values.forEach((v, i) => { if (v == null) { pen = false; return; } path += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = true; });
+    g += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="${s.width || 1.6}" ${s.dash ? 'stroke-dasharray="4 3"' : ''}/>`;
+  });
+  g += `<line id="xh" x1="0" x2="0" y1="${t}" y2="${H - b}" stroke="var(--faint)" opacity="0"/>`;
+  g += `<rect x="${l}" y="${t}" width="${W - l - r}" height="${H - t - b}" fill="transparent" class="hit"/>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
+  const hit = svg.querySelector('.hit'), xh = svg.querySelector('#xh');
+  hit.addEventListener('mousemove', e => {
+    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const i = Math.max(0, Math.min(n - 1, Math.round((p.x - l) / (W - l - r) * (n - 1))));
+    xh.setAttribute('x1', x(i)); xh.setAttribute('x2', x(i)); xh.setAttribute('opacity', 1);
+    const d = new Date(days[i] + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    showTip(e, `<b>${d}</b><br>` + series.map(s => `${s.name}: ${s.values[i] == null ? '–' : fmt(s.values[i], 1) + (opts.unit || '')}`).join('<br>'));
+  });
+  hit.addEventListener('mouseleave', () => { xh.setAttribute('opacity', 0); hideTip(); });
+}
+
+function drawDetail(r) {
+  const el = $('detail');
+  if (!r) { el.innerHTML = ''; return; }
+  const c = r.ccrs;
+  const facts = [
+    ['Avg daily demand', fmt(r.avg_daily_demand) + ' units', `σ ${fmt(r.std_daily_demand)}`],
+    ['Lead time', fmt(r.lead_time) + ' days', `σ ${fmt(r.lead_time_sd)}`],
+    ['Avg unit price', r.unit_value == null ? '–' : '$' + fmt(r.unit_value, 2), ''],
+    ['c(n)', fmt(r.c_n, 3), r.c_adj == null ? '' : `with feedback ${fmt(r.c_adj, 3)}`],
+    ['Classical → ACRF SS', `${fmt(r.ss_classical)} → ${fmt(r.ss_acrf)}`, `${fmt(r.reduction_pct)}% lower`],
+    ['Capital not tied up', usd(r.capital_freed), ''],
+    ['On-time delivery', r.on_time_pct == null ? '–' : fmt(r.on_time_pct) + '%', ''],
+    ['Carrier concentration (HHI)', r.hhi == null ? '–' : fmt(r.hhi, 3), r.disruption_score == null ? '' : `score ${fmt(r.disruption_score)}`],
+  ];
+  el.innerHTML = `
+    <div class="detail-head"><h2>${esc(r.category)}</h2>${c ? `<span class="badge" style="color:${riskColor(c.risk_category)}">CCRS ${fmt(c.ccrs_score)} · ${c.risk_category}</span>` : ''}</div>
+    <div class="facts">${facts.map(([k, v, s]) => `<div class="fact"><div class="k">${k}</div><div class="v">${v}</div>${s ? `<div class="k">${s}</div>` : ''}</div>`).join('')}</div>
+    <div class="charts3">
+      <div><div class="lbl" style="font-weight:600;color:var(--ink)">Daily demand and forecast</div>
+        <div class="legend"><span><i class="line" style="background:var(--acrf)"></i>Actual units</span><span><i class="line" style="background:var(--fc)"></i>${params().ma_window}-day moving-average forecast</span></div>
+        <svg id="demandChart" role="img" aria-label="Daily demand and forecast"></svg></div>
+      <div><div class="lbl" style="font-weight:600;color:var(--ink)">Rolling forecast error (MAPE)</div>
+        <div class="legend"><span><i class="line" style="background:var(--fc)"></i>${params().mape_window}-day rolling MAPE · latest ${r.mape == null ? '–' : fmt(r.mape) + '%'}</span></div>
+        <svg id="mapeChart" role="img" aria-label="Rolling MAPE"></svg></div>
+    </div>
+    ${c && !c.partial ? `<div style="margin-top:14px"><div class="lbl" style="font-weight:600;color:var(--ink)">Capacity-risk score composition</div>
+      <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line);margin:8px 0 6px">
+        <span style="width:${c.utilization_component}%;background:var(--u)" data-tip></span><span style="width:${c.forecast_component}%;background:var(--f)"></span><span style="width:${c.disruption_component}%;background:var(--d)"></span></div>
+      <div class="legend"><span><i style="background:var(--u)"></i>Utilization (on-time ${fmt(r.on_time_pct)}%): ${fmt(c.utilization_component)}</span><span><i style="background:var(--f)"></i>Forecast reliability (${fmt(r.forecast_reliability)}): ${fmt(c.forecast_component)}</span><span><i style="background:var(--d)"></i>Disruption exposure (HHI ${fmt(r.hhi, 3)}): ${fmt(c.disruption_component)}</span></div></div>` : c && c.partial ? '<p class="note">Score computed from the components available in this file; add delivery and carrier columns for the full score.</p>' : ''}`;
+  const S = r.series;
+  lineChart($('demandChart'), S.days, [{ name: 'Actual', values: S.actual, color: 'var(--acrf)', width: 1.4 }, { name: 'Forecast', values: S.forecast, color: 'var(--fc)', width: 2 }], {});
+  const mapeVals = new Array(S.days.length).fill(null);
+  S.rolling_mape.forEach(([period, v]) => { const i = period + S.mape_offset; if (i < mapeVals.length) mapeVals[i] = v; });
+  lineChart($('mapeChart'), S.days, [{ name: 'Rolling MAPE', values: mapeVals, color: 'var(--fc)', width: 2 }], { unit: '%' });
+}
+
+// ---------- export ----------
+$('exportBtn').onclick = () => {
+  if (!result) return;
+  const head = ['Category', 'Records', 'Avg daily demand', 'Std daily demand', 'Lead time', 'Lead time SD', 'Avg unit price', 'c(n)', 'Latest MAPE %', 'c(n) with feedback', 'Classical SS', 'ACRF SS', 'Reduction %', 'Capital not tied up', 'On-time %', 'HHI', 'CCRS', 'Risk band'];
+  const lines = [head.join(',')].concat(result.categories.map(r => [JSON.stringify(r.category), r.records, r.avg_daily_demand, r.std_daily_demand, r.lead_time, r.lead_time_sd, r.unit_value ?? '', r.c_n, r.mape ?? '', r.c_adj ?? '', r.ss_classical, r.ss_acrf, r.reduction_pct, r.capital_freed ?? '', r.on_time_pct ?? '', r.hhi ?? '', r.ccrs?.ccrs_score ?? '', r.ccrs?.risk_category ?? ''].join(',')));
+  const P = result.portfolio;
+  lines.push('', `Source,${JSON.stringify(result.source)}`, `Window,${P.start} to ${P.end} (${P.n_days} days)`, `Service level z,${params().z}`, `Forecast-error feedback,${params().feedback ? 'on' : 'off'}`, `Total capital not tied up,${P.capital_freed ?? ''}`);
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' })); a.download = 'acrf_results.csv'; a.click();
+};
+$('printBtn').onclick = () => window.print();
+
+// ---------- controls ----------
+['topn', 'z', 'feedback', 'bench', 'ma', 'mw', 'wu', 'wf', 'wd', 'fl'].forEach(id => $(id).addEventListener('change', run));
+let nTimer; $('nOverride').addEventListener('input', () => { nTouched = true; $('nLabel').textContent = $('nOverride').value + ' days (what-if)'; clearTimeout(nTimer); nTimer = setTimeout(run, 120); });
+$('nReset').onclick = () => { nTouched = false; run(); };
+$('advBtn').onclick = () => { const h = $('advPanel').classList.toggle('hidden'); $('advBtn').setAttribute('aria-expanded', !h); };
+$('mapBtn').onclick = () => { buildMap(); $('mapPanel').classList.toggle('hidden'); };
+$('srcSample').onclick = () => { $('srcSample').setAttribute('aria-pressed', 'true'); $('srcUpload').setAttribute('aria-pressed', 'false'); $('uploadPanel').classList.add('hidden'); $('mapPanel').classList.add('hidden'); loadSample(); };
+$('srcUpload').onclick = () => { $('srcUpload').setAttribute('aria-pressed', 'true'); $('srcSample').setAttribute('aria-pressed', 'false'); $('uploadPanel').classList.remove('hidden'); };
+$('pick').onclick = () => $('file').click();
+$('file').onchange = e => e.target.files[0] && readFile(e.target.files[0]);
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); e.dataTransfer.files[0] && readFile(e.dataTransfer.files[0]); });
+
+async function readFile(f) {
+  status('Reading ' + f.name + '…', 'busy');
+  try {
+    const info = loadCsv(await f.text(), f.name);
+    $('uploadPanel').classList.add('hidden');
+    nTouched = false; buildMap(); $('mapPanel').classList.remove('hidden');
+    status(`${info.rows.toLocaleString()} rows read from ${f.name}. Check the column mapping, then apply.`);
+    if (mapping.date && mapping.category && mapping.quantity) run();
+  } catch (e) { status('Could not read the file: ' + String(e.message).split('\n').filter(Boolean).pop(), 'err'); }
+}
+
+const ROLE_LABELS = { date: 'Order date *', category: 'Category or SKU *', quantity: 'Quantity *', price: 'Unit price', sales: 'Sales amount', lead_real: 'Actual lead / shipping days', lead_sched: 'Scheduled lead / shipping days', late_flag: 'Late-delivery flag (1 = late)', carrier: 'Carrier, shipping mode, or supplier', order_id: 'Order ID' };
+function buildMap() {
+  $('mapFields').innerHTML = Object.entries(ROLE_LABELS).map(([role, label]) =>
+    `<div class="ctl"><label for="m-${role}">${label}</label><select id="m-${role}"><option value="">(none)</option>${columns.map(c => `<option ${mapping[role] === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>`).join('');
+}
+$('mapApply').onclick = () => { Object.keys(ROLE_LABELS).forEach(role => mapping[role] = $('m-' + role).value || null); $('mapPanel').classList.add('hidden'); run(); };
+
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => result && render(), 150); });
+await loadSample();
+})();
+</script>
+</body>
+</html>
