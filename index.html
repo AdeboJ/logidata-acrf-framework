@@ -94,7 +94,8 @@ code{font-size:13px}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#fff;font-size:11px}
   .wrap{max-width:none;padding:0}
-  .toolbar,.no-print,#advPanel,#mapPanel,#uploadPanel,.status,[id*="netlify" i],[class*="netlify" i]{display:none!important}
+  .toolbar{padding:8px 12px;margin-bottom:10px;gap:6px 12px}.toolbar .btn,.toolbar .spacer{display:none}
+  .no-print:not(.toolbar),#advPanel,#mapPanel,#uploadPanel,.status,[id*="netlify" i],[class*="netlify" i]{display:none!important}
   header{margin-bottom:8px}h1{font-size:20px}.lede{font-size:11px;max-width:none}
   .panel{padding:10px 12px;margin-bottom:10px;border-color:#dde1e7;break-inside:avoid}
   .kpis{grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px}
