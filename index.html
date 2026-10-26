@@ -84,9 +84,25 @@ details p,details li{color:var(--muted);font-size:14px}
 code{font-size:13px}
 .drop{border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;color:var(--muted);font-size:14px}
 .drop.over{border-color:var(--acrf);background:var(--accent-soft)}
+@page{size:letter landscape;margin:0.4in}
 @media print{
-  body{background:#fff}.toolbar,.no-print,#advPanel,#mapPanel{display:none!important}
-  .panel,.kpi{break-inside:avoid;border-color:#ccc}
+  :root{--bg:#fff;--surface:#fff;--surface2:#f4f6f9;--ink:#14213d;--muted:#5b6475;--faint:#8a93a3;--line:#dde1e7;
+    --acrf:#1f6fe0;--classic:#a3abb8;--fc:#d9822b;--good:#17924a;--warn:#b7791f;--bad:#c0392b;--accent-soft:#e8f0fd;--u:#1f6fe0;--f:#17924a;--d:#b7791f}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff;font-size:11px}
+  .wrap{max-width:none;padding:0}
+  .toolbar,.no-print,#advPanel,#mapPanel,#uploadPanel,.status,[id*="netlify" i],[class*="netlify" i]{display:none!important}
+  header{margin-bottom:8px}h1{font-size:20px}.lede{font-size:11px;max-width:none}
+  .panel{padding:10px 12px;margin-bottom:10px;border-color:#dde1e7;break-inside:avoid}
+  .kpis{grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px}
+  .kpi{padding:8px 10px;break-inside:avoid}.kpi .v{font-size:18px}
+  .grid2{grid-template-columns:1.2fr 1fr;gap:10px}
+  .tablewrap{overflow:visible}
+  table{font-size:10px}th,td{padding:5px 6px}
+  .charts3{grid-template-columns:1.4fr 1fr}
+  .facts{grid-template-columns:repeat(4,1fr)}
+  #detail,.panel:has(details){break-inside:auto}
+  .facts,.charts3,.charts3>div,.kpis,.grid2>.panel{break-inside:avoid}
 }
 </style>
 </head>
@@ -487,6 +503,9 @@ function buildMap() {
 }
 $('mapApply').onclick = () => { Object.keys(ROLE_LABELS).forEach(role => mapping[role] = $('m-' + role).value || null); $('mapPanel').classList.add('hidden'); run(); };
 
+let openedForPrint = false;
+addEventListener('beforeprint', () => { const d = document.querySelector('details'); if (d && !d.open) { d.open = true; openedForPrint = true; } });
+addEventListener('afterprint', () => { if (openedForPrint) { document.querySelector('details').open = false; openedForPrint = false; } });
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => result && render(), 150); });
 await loadSample();
 })();
