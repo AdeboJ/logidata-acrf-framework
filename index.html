@@ -288,8 +288,10 @@ function hhiOf(values) {
   return {score: npRnd(Math.max(0, Math.min(100, (1 - h) * 150)), 1), hhi: npRnd(h, 4)};
 }
 function ccrsOf(u, f, d, w) {
-  var s = w[0] * u + w[1] * f + w[2] * d;
-  return {ccrs_score: rnd(s, 1), utilization_component: rnd(w[0] * u, 1), forecast_component: rnd(w[1] * f, 1), disruption_component: rnd(w[2] * d, 1),
+  // Each component is rounded to one decimal, and the score is the sum of those rounded
+  // components, so the score always equals the parts shown (the method used in the technical paper).
+  var cu = rnd(w[0] * u, 1), cf = rnd(w[1] * f, 1), cd = rnd(w[2] * d, 1), s = rnd(cu + cf + cd, 1);
+  return {ccrs_score: s, utilization_component: cu, forecast_component: cf, disruption_component: cd,
     risk_category: s >= 70 ? 'Low Risk' : s >= 50 ? 'Moderate Risk' : 'High Risk', partial: false};
 }
 
@@ -1314,7 +1316,7 @@ class Component extends PreactComponent {
     var mp = ACRF.guessMapping(t.header);
     var missing = ['date', 'category', 'quantity'].some(function (r) { return !mp[r]; });
     this.setState({src: src, sourceName: name, rows: t.rows.length, ncols: t.header.length, mapping: mp, dv: this.state.dv + 1, loading: false, loadErr: null,
-      sel: null, hi: null, ex: null, nOv: null, mapOpen: null, sk: 'capital_freed', sd: -1, drawer: (src === 'upload' || missing) ? 'data' : null});
+      sel: null, hi: null, ex: null, nOv: null, mapOpen: null, sk: 'capital_freed', sd: -1, drawer: missing ? 'data' : null});
     this.go();
   }
   params() {
