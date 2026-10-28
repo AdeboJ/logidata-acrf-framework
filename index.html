@@ -1299,7 +1299,8 @@ class Component extends PreactComponent {
   readFile(f) {
     var self = this;
     if (!f) return;
-    if (!/\.(csv|txt)$/i.test(f.name) && f.type && !/csv|text|excel/i.test(f.type)) { this.setState({loadErr: f.name + ' is not a CSV file. Export the sheet as CSV (comma-separated) and try again.', pageDrag: false}); return; }
+    if (/\.(xlsx|xlsm|xls|numbers)$/i.test(f.name)) { this.setState({loadErr: f.name + ' is a spreadsheet file. Open it in Excel or Google Sheets, choose File, then Save As or Download, pick CSV (comma-separated), and upload that file.', pageDrag: false}); return; }
+    if (!/\.(csv|txt|tsv)$/i.test(f.name) && f.type && !/csv|text/i.test(f.type)) { this.setState({loadErr: f.name + ' is not a CSV file. Choose a .csv file with one row per order line.', pageDrag: false}); return; }
     this.setState({loading: true, loadText: 'Reading ' + f.name + '…', loadErr: null, pageDrag: false});
     var rd = new FileReader();
     rd.onload = function () {
@@ -2043,7 +2044,7 @@ Component.prototype.render = function () {
   const V = this.renderVals();
   return html`<div class="th" onDragEnter=${V.onPageDrag} onDragOver=${V.onPageDrag} style="${V.themeVars} font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ink); background: var(--page); font-feature-settings: 'tnum' 1, 'cv11' 1; min-height: 100%">
 
-<input id="csvfile" class="sr" type="file" accept=".csv,text/csv" tabindex="-1" aria-hidden="true" onChange=${V.onFile} />
+<input id="csvfile" class="sr" type="file" tabindex="-1" aria-hidden="true" onChange=${V.onFile} />
 
 <header class="th" style="border-bottom: 1px solid var(--line); background: var(--page)">
 <div class="gut" style="max-width: 1360px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
