@@ -243,9 +243,12 @@ def composite_capacity_risk_score(utilization_efficiency: float,
     assert abs(w_util + w_forecast + w_disruption - 1.0) < 0.001, \
         "Weights must sum to 1.0"
 
-    ccrs = (w_util * utilization_efficiency +
-            w_forecast * forecast_reliability +
-            w_disruption * disruption_exposure)
+    # Each weighted component is reported to one decimal place, and the score is
+    # the sum of those reported components, so the score always equals its parts.
+    utilization_component = round(w_util * utilization_efficiency, 1)
+    forecast_component = round(w_forecast * forecast_reliability, 1)
+    disruption_component = round(w_disruption * disruption_exposure, 1)
+    ccrs = round(utilization_component + forecast_component + disruption_component, 1)
 
     if ccrs >= 70:
         category = 'Low Risk'
@@ -255,10 +258,10 @@ def composite_capacity_risk_score(utilization_efficiency: float,
         category = 'High Risk'
 
     return {
-        'ccrs_score': round(ccrs, 1),
-        'utilization_component': round(w_util * utilization_efficiency, 1),
-        'forecast_component': round(w_forecast * forecast_reliability, 1),
-        'disruption_component': round(w_disruption * disruption_exposure, 1),
+        'ccrs_score': ccrs,
+        'utilization_component': utilization_component,
+        'forecast_component': forecast_component,
+        'disruption_component': disruption_component,
         'risk_category': category
     }
 
